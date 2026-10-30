@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeForge AI — Générateur de code</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0b0f19; --panel: #131a28; --panel-2: #1a2334; --border: #263049;
+    --text: #e6ecf5; --muted: #8b98b1; --accent: #7c5cff; --accent-2: #22d3ee;
+    --ok: #22c55e; --err: #ef4444;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: radial-gradient(circle at 10% 0%, #1a1240 0%, var(--bg) 40%), radial-gradient(circle at 90% 100%, #0e2a3a 0%, transparent 50%); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; border-bottom: 1px solid var(--border); background: rgba(11,15,25,0.7); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .logo-icon { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); display: grid; place-items: center; font-size: 18px; }
+  .status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--err); }
+  .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .layout { flex: 1; display: grid; grid-template-columns: 320px 1fr; overflow: hidden; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .sidebar { display: none; } .sidebar.open { display: block; position: fixed; top: 62px; left: 0; right: 0; bottom: 0; z-index: 20; } }
+  .sidebar { background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .group { display: flex; flex-direction: column; gap: 8px; }
+  .group > label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  input, select, textarea, button { font-family: inherit; color: var(--text); }
+  input, select, textarea { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 13px; width: 100%; outline: none; transition: border-color .15s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 60px; }
+  .row { display: flex; gap: 8px; } .row > * { flex: 1; }
+  .btn { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border: none; border-radius: 9px; padding: 10px 16px; font-weight: 600; font-size: 13px; cursor: pointer; color: white; transition: transform .1s, opacity .15s; display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+  .btn:hover { opacity: .92; } .btn:active { transform: scale(.98); } .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); }
+  .btn.danger { background: var(--err); }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--panel-2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 11px; font-size: 11.5px; cursor: pointer; color: var(--muted); transition: all .15s; }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+  .history-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+  .history-item { font-size: 12px; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  .history-item:hover { color: var(--text); border-color: var(--accent); }
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .chat { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+  .msg { max-width: 900px; margin: 0 auto; width: 100%; }
+  .msg.user { display: flex; justify-content: flex-end; }
+  .bubble { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 1.6; max-width: 80%; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user .bubble { background: linear-gradient(135deg, #2a1f5c, #1a3a4a); border-color: #3d3170; }
+  .response { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; font-size: 14px; line-height: 1.65; }
+  .response p { margin: 8px 0; }
+  .response code.inline { background: #0d1420; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--accent-2); }
+  .code-block { margin: 12px 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); background: #0d1117; }
+  .code-header { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; background: var(--panel-2); border-bottom: 1px solid var(--border); font-size: 11.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .code-header .actions { display: flex; gap: 4px; }
+  .code-header button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11.5px; padding: 3px 7px; border-radius: 5px; transition: all .15s; }
+  .code-header button:hover { background: var(--border); color: var(--text); }
+  .code-block pre { margin: 0; padding: 14px; overflow-x: auto; font-size: 12.5px; }
+  .code-block code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+  .input-area { border-top: 1px solid var(--border); background: var(--panel); padding: 14px 22px; }
+  .input-wrap { max-width: 900px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+  .input-wrap textarea { flex: 1; min-height: 52px; max-height: 200px; resize: none; padding: 13px 15px; font-size: 14px; line-height: 1.5; border-radius: 12px; }
+  .send-btn { width: 52px; height: 52px; border-radius: 12px; padding: 0; font-size: 20px; }
+  .hint { text-align: center; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty h2 { color: var(--text); margin-bottom: 10px; font-size: 20px; }
+  .empty p { font-size: 14px; line-height: 1.6; }
+  .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .mob-toggle { display: none; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; color: var(--text); font-size: 13px; }
+  @media (max-width: 860px) { .mob-toggle { display: block; } }
+  .cursor-blink { display: inline-block; width: 8px; height: 15px; background: var(--accent-2); animation: blink 1s infinite; vertical-align: middle; margin-left: 2px; }
+  @keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4a6b; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--border); padding: 10px 18px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,.4); opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="logo-icon">⚡</div><span>CodeForge AI</span></div>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Non configuré</span></div>
+    <button class="mob-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">⚙️</button>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="group">
+      <label>Fournisseur IA</label>
+      <select id="provider">
+        <option value="groq">Groq (gratuit)</option>
+        <option value="openai">OpenAI</option>
+        <option value="mistral">Mistral AI</option>
+        <option value="ollama">Ollama (local, gratuit)</option>
+        <option value="anthropic">Anthropic (Claude)</option>
+        <option value="custom">Personnalisé</option>
+      </select>
+    </div>
+    <div class="group"><label>Clé API</label><input type="password" id="apiKey" placeholder="sk-..."><span style="font-size:11px;color:var(--muted);">Stockée localement. Inutile pour Ollama.</span></div>
+    <div class="group"><label>Modèle</label><input type="text" id="model" placeholder="llama-3.3-70b-versatile"></div>
+    <div class="group" id="urlGroup" style="display:none;"><label>URL de l'endpoint</label><input type="text" id="baseUrl" placeholder="https://api.exemple.com/v1/chat/completions"></div>
+    <div class="group">
+      <label>Langage cible</label>
+      <select id="language">
+        <option>Python</option><option>JavaScript</option><option>TypeScript</option><option>Java</option><option>C++</option><option>C#</option><option>Go</option><option>Rust</option><option>PHP</option><option>Ruby</option><option>Swift</option><option>Kotlin</option><option>SQL</option><option>Bash</option><option>PowerShell</option><option>HTML/CSS</option>
+      </select>
+    </div>
+    <div class="group">
+      <label>Type de code</label>
+      <select id="codeType">
+        <option>Programme complet</option><option>Fonction / méthode</option><option>Classe / module</option><option>Script d'automatisation</option><option>Programme automatique (autonome)</option><option>API REST</option><option>Outil CLI</option><option>Application web</option><option>Bot (Telegram/Discord)</option><option>Web scraper</option><option>Tests unitaires</option><option>Correction / refactorisation</option>
+      </select>
+    </div>
+    <div class="group"><label>Raccourcis</label><div class="presets" id="presets"></div></div>
+    <div class="group"><label>Historique</label><div class="history-list" id="historyList"></div></div>
+    <button class="btn ghost" onclick="clearHistory()">🗑️ Effacer l'historique</button>
+  </aside>
+  <main class="main">
+    <div class="chat" id="chat">
+      <div class="empty" id="emptyState">
+        <h2>⚡ Prêt à générer du code</h2>
+        <p>Configurez votre fournisseur IA à gauche, puis décrivez ce que vous voulez créer.<br>Pour un essai gratuit et local, installez <b>Ollama</b> : <code style="background:#1a2334;padding:2px 6px;border-radius:4px;">ollama run llama3.2</code></p>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea id="prompt" placeholder="Décrivez votre programme... ex: « Un script Python qui trie automatiquement les fichiers d'un dossier par extension »"></textarea>
+        <button class="btn send-btn" id="sendBtn" onclick="generate()" title="Générer (Ctrl+Entrée)">➤</button>
+      </div>
+      <div class="hint">Ctrl+Entrée pour générer · Les clés API restent dans votre navigateur</div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const PROVIDERS = { groq: { url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile', format: 'openai' }, openai: { url: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini', format: 'openai' }, mistral: { url: 'https://api.mistral.ai/v1/chat/completions', model: 'mistral-large-latest', format: 'openai' }, ollama: { url: 'http://localhost:11434/v1/chat/completions', model: 'llama3.2', format: 'openai' }, anthropic: { url: 'https://api.anthropic.com/v1/messages', model: 'claude-sonnet-4-20250514', format: 'anthropic' }, custom: { url: '', model: '', format: 'openai' } };
+const EXT = { 'Python':'.py','JavaScript':'.js','TypeScript':'.ts','Java':'.java','C++':'.cpp','C#':'.cs','Go':'.go','Rust':'.rs','PHP':'.php','Ruby':'.rb','Swift':'.swift','Kotlin':'.kt','SQL':'.sql','Bash':'.sh','PowerShell':'.ps1','HTML/CSS':'.html' };
+const PRESETS = [ { label: '🗂️ Tri fichiers', text: "Un programme Python automatique qui surveille un dossier et trie automatiquement les fichiers par extension dans des sous-dossiers. Avec logs et gestion d'erreurs." }, { label: '🌐 API REST', text: 'Une API REST complète avec CRUD, validation, et documentation.' }, { label: '🕷️ Web scraper', text: 'Un scraper qui extrait les titres et prix d\'un site e-commerce et exporte en CSV.' }, { label: '⏰ Tâche cron', text: 'Un script automatique qui s\'exécute toutes les heures, effectue une sauvegarde et envoie un rapport par email.' }, { label: '🤖 Bot Telegram', text: 'Un bot Telegram avec commandes /start, /help et envoi de messages programmés.' }, { label: '🖥️ CLI tool', text: 'Un outil en ligne de commande avec arguments, options, aide et couleurs.' }, { label: '🔄 Surveillance', text: 'Un programme qui surveille un flux RSS/API et notifie en cas de changement.' }, { label: '📊 Dashboard', text: 'Un dashboard web avec graphiques et connexion à une base de données.' } ];
+let state = { provider: 'groq', apiKey: '', model: 'llama-3.3-70b-versatile', baseUrl: '', language: 'Python', codeType: 'Programme complet', history: [] };
+let isGenerating = false; let currentController = null; let streamBuffer = ''; let renderTimer = null; let currentResponseEl = null;
+function init() { loadState(); renderPresets(); renderHistory(); updateStatus(); bindEvents(); }
+function bindEvents() {
+  document.getElementById('provider').addEventListener('change', e => { const p = e.target.value; const cfg = PROVIDERS[p]; document.getElementById('model').value = cfg.model; document.getElementById('baseUrl').value = ''; document.getElementById('urlGroup').style.display = p === 'custom' ? 'flex' : 'none'; state.provider = p; updateStatus(); saveState(); });
+  ['apiKey','model','baseUrl'].forEach(id => { document.getElementById(id).addEventListener('input', e => { state[id] = e.target.value; updateStatus(); saveState(); }); });
+  document.getElementById('language').addEventListener('change', e => { state.language = e.target.value; saveState(); });
+  document.getElementById('codeType').addEventListener('change', e => { state.codeType = e.target.value; saveState(); });
+  document.getElementById('prompt').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); generate(); } });
+  document.getElementById('prompt').addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'; });
+}
+function loadState() { try { const saved = JSON.parse(localStorage.getItem('codeforge') || '{}'); Object.assign(state, saved); } catch(e) {} document.getElementById('provider').value = state.provider; document.getElementById('apiKey').value = state.apiKey; document.getElementById('model').value = state.model; document.getElementById('baseUrl').value = state.baseUrl; document.getElementById('language').value = state.language; document.getElementById('codeType').value = state.codeType; document.getElementById('urlGroup').style.display = state.provider === 'custom' ? 'flex' : 'none'; }
+function saveState() { localStorage.setItem('codeforge', JSON.stringify(state)); }
+function updateStatus() { const dot = document.getElementById('statusDot'); const txt = document.getElementById('statusText'); const needsKey = state.provider !== 'ollama'; const ok = state.provider === 'ollama' || (state.apiKey && state.apiKey.length > 5); if (ok) { dot.classList.add('on'); txt.textContent = state.model || state.provider; } else { dot.classList.remove('on'); txt.textContent = needsKey ? 'Clé API requise' : 'Non configuré'; } }
+function renderPresets() { const el = document.getElementById('presets'); el.innerHTML = ''; PRESETS.forEach(p => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = p.label; b.onclick = () => { document.getElementById('prompt').value = p.text; document.getElementById('prompt').focus(); }; el.appendChild(b); }); }
+function renderHistory() { const el = document.getElementById('historyList'); el.innerHTML = ''; if (!state.history.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:4px;">Aucune génération</div>'; return; } state.history.slice(0, 15).forEach((h, i) => { const d = document.createElement('div'); d.className = 'history-item'; d.textContent = h.prompt.slice(0, 60); d.title = h.prompt; d.onclick = () => { document.getElementById('prompt').value = h.prompt; document.getElementById('prompt').focus(); }; el.appendChild(d); }); }
+function clearHistory() { state.history = []; saveState(); renderHistory(); toast('Historique effacé'); }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2200); }
+function buildSystemPrompt() { const lang = state.language; const type = state.codeType; let extra = ''; if (type.includes('automatique') || type.includes('automatisation')) { extra = `\n\nMODE PROGRAMME AUTOMATIQUE — règles supplémentaires :\n- Le programme doit être COMPLET et autonome (aucune dépendance manquante)\n- Inclure la gestion d'erreurs (try/except, try/catch) à chaque étape critique\n- Inclure des logs clairs avec timestamps\n- Inclure les instructions d'installation des dépendances\n- Inclure les instructions d'exécution (comment lancer le programme)\n- Si pertinent : ajouter un mode démon / boucle, et la gestion de l'arrêt propre\n- Documenter chaque paramètre configurable en haut du fichier`; } return `Tu es un ingénieur logiciel expert et générateur de code professionnel.\nTa mission : générer du code ${lang} de type "${type}"${extra}\n\nRÈGLES DE SORTIE :\n- Explique en FRANÇAIS, de façon concise (2-4 lignes max avant le code)\n- Fournis TOUJOURS un bloc de code markdown avec la bonne balise de langage\n- Le code doit être complet, fonctionnel, testé mentalement, et prêt à l'emploi\n- Inclus les imports, la fonction main si applicable, et un point d'entrée\n- Commente le code en français sur les parties importantes\n- N'invente pas de dépendances exotiques : privilégie la bibliothèque standard\n- Après le code, liste les dépendances à installer si nécessaire`; }
+async function generate() {
+  if (isGenerating) return; const prompt = document.getElementById('prompt').value.trim(); if (!prompt) { toast('Décrivez ce que vous voulez créer'); return; }
+  if (state.provider !== 'ollama' && !state.apiKey && state.provider !== 'custom') { toast('Veuillez saisir une clé API dans les paramètres'); return; }
+  if (state.provider === 'custom' && !state.baseUrl) { toast('Renseignez l\'URL de l\'endpoint'); return; }
+  isGenerating = true; document.getElementById('sendBtn').disabled = true; document.getElementById('emptyState')?.remove();
+  addUserMessage(prompt); document.getElementById('prompt').value = ''; document.getElementById('prompt').style.height = 'auto';
+  currentResponseEl = document.createElement('div'); currentResponseEl.className = 'msg'; currentResponseEl.innerHTML = `<div class="response"><span class="loading"></span> Génération en cours...</div>`; document.getElementById('chat').appendChild(currentResponseEl); scrollChat();
+  streamBuffer = ''; currentController = new AbortController();
+  try { await callAI(prompt, currentController.signal); finalizeResponse(prompt, streamBuffer); } catch (err) { if (err.name === 'AbortError') { currentResponseEl.querySelector('.response').innerHTML = '<span style="color:var(--err);">⏹ Génération arrêtée.</span>'; } else { console.error(err); currentResponseEl.querySelector('.response').innerHTML = `<div style="color:var(--err);">❌ Erreur : ${escapeHtml(err.message)}</div><div style="font-size:12px;color:var(--muted);margin-top:8px;">Vérifiez votre clé API, le modèle choisi, et votre connexion.</div>`; } } finally { isGenerating = false; document.getElementById('sendBtn').disabled = false; currentController = null; }
+}
+function addUserMessage(text) { const el = document.createElement('div'); el.className = 'msg user'; el.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`; document.getElementById('chat').appendChild(el); scrollChat(); }
+function scrollChat() { const chat = document.getElementById('chat'); chat.scrollTop = chat.scrollHeight; }
+async function callAI(prompt, signal) {
+  const provider = PROVIDERS[state.provider]; const isAnthropic = provider.format === 'anthropic'; const url = state.provider === 'custom' ? state.baseUrl : provider.url; const model = state.model || provider.model;
+  let headers = { 'Content-Type': 'application/json' }; let body;
+  if (isAnthropic) { headers['x-api-key'] = state.apiKey; headers['anthropic-version'] = '2023-06-01'; headers['anthropic-dangerous-direct-browser-access'] = 'true'; body = { model: model, max_tokens: 8000, system: buildSystemPrompt(), messages: [{ role: 'user', content: prompt }], stream: true }; } else { if (state.provider !== 'ollama') headers['Authorization'] = 'Bearer ' + state.apiKey; body = { model: model, messages: [{ role: 'system', content: buildSystemPrompt() }, { role: 'user', content: prompt }], stream: true, temperature: 0.3 }; }
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal });
+  if (!res.ok) { let detail = ''; try { const j = await res.json(); detail = j.error?.message || JSON.stringify(j); } catch(e) { detail = await res.text().catch(() => ''); } throw new Error(`HTTP ${res.status} — ${detail.slice(0, 200)}`); }
+  await streamResponse(res, isAnthropic);
+}
+async function streamResponse(res, isAnthropic) {
+  const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = '';
+  while (true) { const { done, value } = await reader.read(); if (done) break; buffer += decoder.decode(value, { stream: true }); const lines = buffer.split('\n'); buffer = lines.pop();
+    for (const line of lines) { const trimmed = line.trim(); if (!trimmed || trimmed.startsWith('event:')) continue; if (!trimmed.startsWith('data:')) continue; const data = trimmed.slice(5).trim(); if (data === '[DONE]') continue;
+      try { const json = JSON.parse(data); let delta = ''; if (isAnthropic) { if (json.type === 'content_block_delta' && json.delta?.type === 'text_delta') { delta = json.delta.text || ''; } } else { delta = json.choices?.[0]?.delta?.content || ''; } if (delta) { streamBuffer += delta; scheduleRender(); } } catch(e) {} } }
+}
+function scheduleRender() { if (renderTimer) return; renderTimer = setTimeout(() => { renderTimer = null; if (!currentResponseEl) return; const box = currentResponseEl.querySelector('.response'); box.innerHTML = renderMarkdown(streamBuffer) + '<span class="cursor-blink"></span>'; highlightAll(box); scrollChat(); }, 90); }
+function finalizeResponse(prompt, text) { if (!currentResponseEl) return; const box = currentResponseEl.querySelector('.response'); box.innerHTML = renderMarkdown(text); highlightAll(box); scrollChat(); state.history.unshift({ prompt, response: text, ts: Date.now() }); state.history = state.history.slice(0, 30); saveState(); renderHistory(); }
+function escapeHtml(str) { return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function renderMarkdown(text) {
+  const parts = []; const regex = /```([a-zA-Z0-9+#\-]*)\n([\s\S]*?)```/g; let last = 0, m;
+  while ((m = regex.exec(text)) !== null) { if (m.index > last) parts.push({ type: 'text', content: text.slice(last, m.index) }); parts.push({ type: 'code', lang: m[1] || state.language.toLowerCase(), content: m[2] }); last = m.index + m[0].length; }
+  if (last < text.length) parts.push({ type: 'text', content: text.slice(last) });
+  let html = '';
+  for (const p of parts) {
+    if (p.type === 'text') { let t = escapeHtml(p.content); t = t.replace(/`([^`]+)`/g, '<code class="inline">$1</code>'); t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>'); t = t.split(/\n{2,}/).map(x => `<p>${x.replace(/\n/g, '<br>')}</p>`).join(''); html += t; }
+    else { const lang = p.lang || 'plaintext'; const codeId = 'code_' + Math.random().toString(36).slice(2, 9); html += `<div class="code-block"><div class="code-header"><span>${escapeHtml(lang)}</span><div class="actions"><button onclick="copyCode('${codeId}', this)">📋 Copier</button><button onclick="downloadCode('${codeId}', '${escapeHtml(lang)}')">⬇️ Télécharger</button></div></div><pre><code id="${codeId}" class="language-${escapeHtml(lang)}">${escapeHtml(p.content)}</code></pre></div>`; }
+  }
+  return html;
+}
+function highlightAll(container) { container.querySelectorAll('pre code').forEach(block => { try { hljs.highlightElement(block); } catch(e) {} }); }
+function copyCode(id, btn) { const code = document.getElementById(id).textContent; navigator.clipboard.writeText(code).then(() => { const old = btn.textContent; btn.textContent = '✓ Copié !'; setTimeout(() => btn.textContent = old, 1500); }).catch(() => toast('Copie impossible')); }
+function downloadCode(id, lang) { const code = document.getElementById(id).textContent; const ext = EXT[state.language] || '.' + (lang || 'txt').toLowerCase(); const blob = new Blob([code], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'codeforge_' + Date.now() + ext; a.click(); URL.revokeObjectURL(a.href); toast('Téléchargement démarré'); }
+init();
+</script>
+</body>
+</html>
